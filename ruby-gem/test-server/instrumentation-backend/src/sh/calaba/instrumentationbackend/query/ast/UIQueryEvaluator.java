@@ -1,6 +1,5 @@
 package sh.calaba.instrumentationbackend.query.ast;
 
-import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -13,9 +12,10 @@ import org.antlr.runtime.CommonTokenStream;
 import org.antlr.runtime.RecognitionException;
 import org.antlr.runtime.tree.CommonTree;
 
+import android.view.View;
+
 import sh.calaba.instrumentationbackend.query.antlr.UIQueryLexer;
 import sh.calaba.instrumentationbackend.query.antlr.UIQueryParser;
-import sh.calaba.org.codehaus.jackson.map.ObjectMapper;
 
 public class UIQueryEvaluator {
 
@@ -23,37 +23,15 @@ public class UIQueryEvaluator {
 		public static final UIQueryResultVoid instance = new UIQueryResultVoid();
 		
 		private UIQueryResultVoid() {}
-
+		
 		@SuppressWarnings({ "rawtypes", "unchecked" })
-		public String asJSON(String methodName, Object receiver) {
-			ObjectMapper mapper = new ObjectMapper();
-
-			try {
-				Map map = new HashMap();
-				map.put("error","Unable to invoke method");
-				map.put("methodName",methodName);
-				map.put("receiverClass", receiver.getClass().getName());
-				map.put("receiverString",receiver.toString());
-				return mapper.writeValueAsString(map);
-			} catch (IOException e) {
-				throw new RuntimeException("Could not convert result to json",e);
-			}
-		}
-
-		@SuppressWarnings({ "rawtypes", "unchecked" })
-		public Object asJSON(String methodName, Object receiver,String errorMessage) {
-			ObjectMapper mapper = new ObjectMapper();
-
-			try {
-				Map map = new HashMap();
-				map.put("error",errorMessage);
-				map.put("methodName",methodName);
-				map.put("receiverClass", receiver.getClass().getName());
-				map.put("receiverString",receiver.toString());
-				return mapper.writeValueAsString(map);
-			} catch (IOException e) {
-				throw new RuntimeException("Could not convert result to json",e);
-			}
+		public Object asMap(String methodName, Object receiver,String errorMessage) {
+			Map map = new HashMap();
+			map.put("error",errorMessage);
+			map.put("methodName",methodName);
+			map.put("receiverClass", receiver.getClass().getName());
+			map.put("receiverString",receiver.toString());
+			return map;
 		}
 	}
 
@@ -82,24 +60,44 @@ public class UIQueryEvaluator {
 				try {
 					
 					before = System.currentTimeMillis();
-					
-					Method m = UIQueryUtils.hasProperty(o, propertyName);
-					after = System.currentTimeMillis();
-			        action = "HasProperty";
-			        System.out.println(action+ " took: "+ (after-before) + "ms");
-
-
-					if (m != null) {
-						nextResult.add(m.invoke(o));	
+					if (o instanceof Map)
+					{
+						Map objAsMap = (Map) o;
+						if (objAsMap.containsKey(propertyName))
+						{
+							nextResult.add(objAsMap.get(propertyName));
+						}
+						else 
+						{
+							nextResult.add(UIQueryResultVoid.instance.asMap(propertyName,o,"No key for "+propertyName + ". Keys: "+(objAsMap.keySet().toString())));
+						}						
 					}
 					else 
 					{
-						nextResult.add(UIQueryResultVoid.instance.asJSON(propertyName,o,"NO accessor for "+propertyName));
+						if (o instanceof View && "id".equals(propertyName))
+						{
+							nextResult.add(UIQueryUtils.getId((View) o));
+						}
+						else 
+						{
+							Method m = UIQueryUtils.hasProperty(o, propertyName);
+							after = System.currentTimeMillis();
+					        action = "HasProperty";
+					        System.out.println(action+ " took: "+ (after-before) + "ms");
+							if (m != null) {
+								nextResult.add(m.invoke(o));	
+							}
+							else 
+							{
+								nextResult.add(UIQueryResultVoid.instance.asMap(propertyName,o,"NO accessor for "+propertyName));
+							}							
+						}
 					}
 					
+										
 				} catch (Exception e) {
 					System.out.println(e.getMessage());
-					nextResult.add(UIQueryResultVoid.instance.asJSON(propertyName,o));
+					nextResult.add(UIQueryResultVoid.instance.asMap(propertyName,o,e.getMessage()));
 				}
 			}
 			result = nextResult;
@@ -117,7 +115,6 @@ public class UIQueryEvaluator {
 		try {
 			q = parser.query();
 		} catch (RecognitionException e) {
-			// TODO Auto-generated catch block
 			throw new InvalidUIQueryException(e.getMessage());
 		}
 		if (q == null) {
