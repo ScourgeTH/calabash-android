@@ -89,7 +89,23 @@ end
 
 def fingerprint_from_keystore
   keystore_info = read_keystore_info
-  fingerprints = `#{keytool_path} -v -list -alias #{keystore_info["keystore_alias"]} -keystore "#{keystore_info["keystore_location"]}" -storepass #{keystore_info["keystore_password"]}`
+  #fingerprints = `#{keytool_path} -v -list -alias #{keystore_info["keystore_alias"]} -keystore "#{keystore_info["keystore_location"]}" -storepass #{keystore_info["keystore_password"]}`
+  #temporary workaround for keytool error
+  fingerprints = 'Alias name: androiddebugkey
+Creation date: Mar 22, 2011
+Entry type: PrivateKeyEntry
+Certificate chain length: 1
+Certificate[1]:
+Owner: CN=Kroger Android Debug, OU=Unknown, O=Android, L=Unknown, ST=Unknown, C=US
+Issuer: CN=Kroger Android Debug, OU=Unknown, O=Android, L=Unknown, ST=Unknown, C=US
+Serial number: 4d88de4a
+Valid from: Tue Mar 22 13:37:14 EDT 2011 until: Sat Aug 07 13:37:14 EDT 2038
+Certificate fingerprints:
+         MD5:  E9:6A:AB:19:D0:67:D9:BF:F7:EA:9F:66:53:7A:B9:78
+         SHA1: E0:EA:80:C1:08:93:C1:FA:72:70:B7:8C:46:F3:BE:8A:1F:BA:74:52
+         SHA256: B3:71:7F:3E:77:FC:90:28:54:35:C2:A0:59:79:4E:22:5C:6A:F2:94:31:74:21:03:4A:84:9F:FC:50:D2:91:B7
+         Signature algorithm name: SHA1withRSA
+         Version: 3'
   md5_fingerprint = extract_md5_fingerprint(fingerprints)
   log "MD5 fingerprint for keystore (#{keystore_info["keystore_location"]}): #{md5_fingerprint}"
   md5_fingerprint
