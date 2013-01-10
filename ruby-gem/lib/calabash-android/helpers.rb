@@ -89,7 +89,7 @@ end
 
 def fingerprint_from_keystore
   keystore_info = read_keystore_info
-  fingerprints = `#{keytool_path} -v -list -alias #{keystore_info["keystore_alias"]} -keystore #{keystore_info["keystore_location"]} -storepass #{keystore_info["keystore_password"]}`
+  fingerprints = `#{keytool_path} -v -list -alias #{keystore_info["keystore_alias"]} -keystore "#{keystore_info["keystore_location"]}" -storepass #{keystore_info["keystore_password"]}`
   md5_fingerprint = extract_md5_fingerprint(fingerprints)
   log "MD5 fingerprint for keystore (#{keystore_info["keystore_location"]}): #{md5_fingerprint}"
   md5_fingerprint
